@@ -1,0 +1,703 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: stage0
+    description: Stage 0 — Map Processing
+  - name: stage1
+    description: Stage 1 — Heatmap Generation
+  - name: stage2
+    description: Stage 2 — Node Placement & Optimization
+  - name: stage3
+    description: Stage 3 — Budget Optimization
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /stage0/runs:
+    post:
+      operationId: createStage0Run
+      tags: [stage0]
+      summary: Run Stage 0 — automatically process an uploaded map into a standardized map + mask
+      description: >
+        Fully automatic. Accepts any supported map style (AI-generated campus
+        renders, satellite/Google-Maps-style images, CAD floor/site plans,
+        colored campus layouts) and produces a clean, standardized
+        Processed_Map + BinaryMask pair that Stage 1 can consume directly,
+        without ever re-reading the original upload. No manual tuning inputs
+        are exposed — detection is heuristic image processing, not a trained
+        model, so results are best-effort on maps with visually distinct
+        buildings/roads/open ground.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/Stage0RunInput"
+      responses:
+        "201":
+          description: Stage 0 run completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stage0Run"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listStage0Runs
+      tags: [stage0]
+      summary: List Stage 0 runs from this session
+      responses:
+        "200":
+          description: Stage 0 run summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Stage0RunSummary"
+
+  /stage0/runs/{runId}:
+    get:
+      operationId: getStage0Run
+      tags: [stage0]
+      summary: Fetch a previously computed Stage 0 run
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stage 0 run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stage0Run"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stage1/runs:
+    post:
+      operationId: createStage1Run
+      tags: [stage1]
+      summary: Run Stage 1 — generate a coverage heatmap from a processed map or a compatible raw map
+      description: >
+        Runs the FDFD wave-propagation simulation and returns the rendered
+        heatmap plus simulation statistics. The full numeric result is stored
+        server-side and can be referenced by later stages via runId.
+
+        Exactly one map source must be provided, and the caller (the user,
+        via an explicit workflow choice in the UI) decides which:
+        `stage0RunId` for Workflow B (a completed Stage 0 run — its
+        standardized Processed_Map + BinaryMask are consumed directly, with
+        no re-reading of the original upload), or `map` for Workflow A (a
+        map already in the simulator's native "Simulation Ready" format,
+        uploaded directly with no preprocessing). Stage 1 never inspects an
+        upload to auto-detect which workflow applies.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/Stage1RunInput"
+      responses:
+        "201":
+          description: Stage 1 run completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stage1Run"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listStage1Runs
+      tags: [stage1]
+      summary: List Stage 1 runs from this session
+      responses:
+        "200":
+          description: Stage 1 run summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Stage1RunSummary"
+
+  /stage1/runs/{runId}:
+    get:
+      operationId: getStage1Run
+      tags: [stage1]
+      summary: Fetch a previously computed Stage 1 run
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Stage 1 run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stage1Run"
+        "404":
+          description: Run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stage1/runs/{runId}/roi:
+    post:
+      operationId: confirmStage1Roi
+      tags: [stage1]
+      summary: Confirm ROI for a Stage 1 run — crops all outputs and saves them server-side
+      description: >
+        Crops the Stage 1 heatmap, signal matrix, binary mask, and campus image
+        to the specified rectangle (heatmap-image pixel coordinates) and persists
+        the cropped outputs in the Stage 1 run directory.  The confirmed ROI is
+        saved in the run record and returned.  Stage 2 reads the pre-cropped
+        files directly — it never re-asks for an ROI.  This endpoint must be
+        called and return successfully before Stage 2 can run.
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmRoiInput"
+      responses:
+        "200":
+          description: ROI confirmed — all Stage 1 outputs cropped and saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfirmRoiResponse"
+        "400":
+          description: Invalid input, run not found, or crop failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stage2/runs:
+    post:
+      operationId: createStage2Run
+      tags: [stage2]
+      summary: Run Stage 2 — dead-zone detection and node placement
+      description: >
+        Consumes a Stage 1 run's stored numerical outputs (mag_db, map_mask,
+        transmitter position) directly — Stage 1 is never recomputed.
+        Detects dead zones, generates candidate node locations within the
+        optional ROI, and computes an optimized node layout using greedy
+        placement followed by redundancy pruning or ILP-based budget selection.
+        The ROI is stored in the run record so Stage 3 can reuse it without
+        asking the user again.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Stage2RunInput"
+      responses:
+        "201":
+          description: Stage 2 run completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Stage2Run"
+        "400":
+          description: Invalid input or Stage 1 run not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /stage3/runs:
+    post:
+      operationId: createStage3Run
+      tags: [stage3]
+      summary: Run Stage 3 — budget-constrained node selection (not yet implemented)
+      description: >
+        Will consume a Stage 2 run's optimized node set directly (no
+        recomputation) and select the best subset under a maximum node budget.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Stage3RunInput"
+      responses:
+        "501":
+          description: Stage 3 is not implemented yet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+          description: Optional machine-readable error code, for programmatic error handling.
+      required:
+        - error
+
+    Stage0RunInput:
+      type: object
+      description: >
+        Multipart form fields for a Stage 0 run. Fully automatic — the only
+        input is the map image itself.
+      required:
+        - map
+      properties:
+        map:
+          type: string
+          format: binary
+          description: Any supported map image (AI-generated, satellite/Google-Maps-style, CAD, colored campus layout, etc.).
+
+    Stage0Metadata:
+      type: object
+      description: Diagnostics about what Stage 0 detected, at the canonical processing resolution.
+      required:
+        - widthPx
+        - heightPx
+        - buildingCoverageFraction
+        - roadCoverageFraction
+        - openAreaFraction
+      properties:
+        widthPx:
+          type: integer
+        heightPx:
+          type: integer
+        buildingCoverageFraction:
+          type: number
+          description: Fraction of the canonical map classified as building footprint.
+        roadCoverageFraction:
+          type: number
+          description: Fraction of the canonical map classified as road/walkway (cosmetic only — not used by the Stage 1 physics mask).
+        openAreaFraction:
+          type: number
+          description: Fraction of the canonical map classified as open ground.
+
+    Stage0RunSummary:
+      type: object
+      required:
+        - runId
+        - createdAt
+        - executionTimeMs
+        - metadata
+      properties:
+        runId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        executionTimeMs:
+          type: number
+        metadata:
+          $ref: "#/components/schemas/Stage0Metadata"
+
+    Stage0Run:
+      type: object
+      required:
+        - runId
+        - createdAt
+        - executionTimeMs
+        - processedMapImageBase64
+        - binaryMaskImageBase64
+        - metadata
+      properties:
+        runId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        executionTimeMs:
+          type: number
+        processedMapImageBase64:
+          type: string
+          description: Standardized, clean engineering-style rendering of the map (Processed_Map.png), as a base64 PNG data URL.
+        binaryMaskImageBase64:
+          type: string
+          description: Human-viewable rendering of the detected building/obstruction mask (BinaryMask.png), as a base64 PNG data URL. Stage 1 loads the lossless array form of this mask directly from disk, not this image.
+        metadata:
+          $ref: "#/components/schemas/Stage0Metadata"
+
+    Stage1RunInput:
+      type: object
+      description: >
+        Multipart form fields for a Stage 1 run. Exactly one of `stage0RunId`
+        or `map` must be provided.
+      properties:
+        stage0RunId:
+          type: string
+          description: Preferred map source — a completed Stage 0 run to consume directly (no re-reading of the original upload).
+        map:
+          type: string
+          format: binary
+          description: >
+            Workflow A — the user has explicitly indicated this map is
+            already in the simulator's native "Simulation Ready" format, so
+            it is used as-is with no preprocessing. Use `stage0RunId`
+            instead (Workflow B) for general map styles.
+        cellSizeMeters:
+          type: number
+          default: 0.5
+          description: Physical size of one grid cell in meters (h). Ignored if realWidthMeters is set.
+        realWidthMeters:
+          type: number
+          description: Optional true physical width of the map in meters, used to auto-calibrate cell size for this map.
+        frequencyMHz:
+          type: number
+          default: 50
+          description: Simulation frequency in MHz (compute/RAM-saving proxy frequency, not literal 2.4GHz Wi-Fi).
+        refractiveIndex:
+          type: number
+          default: 2
+          description: Effective refractive index of building material (n_eff).
+        absorptionCoeff:
+          type: number
+          default: 0.062
+          description: Absorption coefficient of building material in 1/m (alpha_eff).
+        sourceValue:
+          type: number
+          default: 22
+          description: Transmit amplitude injected at the antenna location.
+        minDb:
+          type: number
+          default: -80
+          description: Bottom of the colorbar scale (display only, does not affect the computed field).
+        pmlWidth:
+          type: integer
+          default: 20
+          description: Width, in grid cells, of the absorbing boundary ramp around the domain edges.
+        pmlMaxLoss:
+          type: number
+          default: 0.5
+          description: Strength of the absorbing boundary at the domain edge.
+        alpha3dBump:
+          type: number
+          default: 0
+          description: Optional flat extra loss approximating 3D free-space spreading (0 = off, matches original 2D behavior).
+        sourceXPercent:
+          type: number
+          default: 10
+          description: Horizontal antenna position as percent across the map (0=left, 100=right).
+        sourceYPercent:
+          type: number
+          default: 5
+          description: Vertical antenna position as percent down the map (0=top, 100=bottom).
+        cellBudget:
+          type: integer
+          default: 260000
+          description: Target total grid cell count (rows x cols). Rows/cols are derived from this and the map's aspect ratio. Higher = finer detail, more compute time.
+
+    Stage1ResolvedParams:
+      type: object
+      description: The fully resolved parameters actually used for the run (after defaults and auto-calibration).
+      required:
+        - cellSizeMeters
+        - frequencyMHz
+        - refractiveIndex
+        - absorptionCoeff
+        - sourceValue
+        - minDb
+        - pmlWidth
+        - pmlMaxLoss
+        - alpha3dBump
+        - sourceXPercent
+        - sourceYPercent
+        - cellBudget
+      properties:
+        cellSizeMeters:
+          type: number
+        frequencyMHz:
+          type: number
+        refractiveIndex:
+          type: number
+        absorptionCoeff:
+          type: number
+        sourceValue:
+          type: number
+        minDb:
+          type: number
+        pmlWidth:
+          type: integer
+        pmlMaxLoss:
+          type: number
+        alpha3dBump:
+          type: number
+        sourceXPercent:
+          type: number
+        sourceYPercent:
+          type: number
+        cellBudget:
+          type: integer
+
+    Stage1RunSummary:
+      type: object
+      required:
+        - runId
+        - createdAt
+        - gridRows
+        - gridCols
+        - peakDb
+        - executionTimeMs
+      properties:
+        runId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        gridRows:
+          type: integer
+        gridCols:
+          type: integer
+        peakDb:
+          type: number
+        executionTimeMs:
+          type: number
+
+    Stage1Run:
+      type: object
+      required:
+        - runId
+        - createdAt
+        - executionTimeMs
+        - gridRows
+        - gridCols
+        - peakDb
+        - sourceX
+        - sourceY
+        - heatmapImageBase64
+        - params
+        - sourceMode
+      properties:
+        runId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        executionTimeMs:
+          type: number
+          description: Wall-clock execution time of the simulation, in milliseconds.
+        gridRows:
+          type: integer
+        gridCols:
+          type: integer
+        peakDb:
+          type: number
+          description: Peak absolute signal strength found in the field, in dB.
+        sourceX:
+          type: integer
+          description: Antenna column index in grid space, after snapping to open space if needed.
+        sourceY:
+          type: integer
+          description: Antenna row index in grid space, after snapping to open space if needed.
+        wasSourceSnapped:
+          type: boolean
+          description: Whether the requested antenna position was inside a building and snapped to the nearest open cell.
+        occupiedFraction:
+          type: number
+          description: Fraction of the grid classified as building/obstacle.
+        heatmapImageBase64:
+          type: string
+          description: Rendered heatmap overlay as a base64 PNG data URL.
+        params:
+          $ref: "#/components/schemas/Stage1ResolvedParams"
+        sourceMode:
+          type: string
+          enum: [stage0, raw]
+          description: Whether this run consumed a Stage 0 processed map ("stage0") or a directly-uploaded compatible raw map ("raw").
+        stage0RunId:
+          type: string
+          description: The Stage 0 run this simulation was based on, if sourceMode is "stage0".
+
+    HeatmapRoi:
+      type: object
+      description: >
+        Axis-aligned rectangle in heatmap-image pixel coordinates (natural
+        image size, before any CSS scaling) that defines the valid
+        computational domain for Stages 2 and 3.  Everything outside this
+        region is treated as out-of-bounds: no dead zones are detected there,
+        no candidate nodes are placed there.
+      required:
+        - x
+        - y
+        - width
+        - height
+      properties:
+        x:
+          type: integer
+          description: Left edge in heatmap image pixels (0 = image left).
+        y:
+          type: integer
+          description: Top edge in heatmap image pixels (0 = image top).
+        width:
+          type: integer
+          description: Rectangle width in heatmap image pixels.
+        height:
+          type: integer
+          description: Rectangle height in heatmap image pixels.
+
+    Stage2RunInput:
+      type: object
+      required:
+        - stage1RunId
+      properties:
+        stage1RunId:
+          type: string
+          description: The Stage 1 run to build on. Stage 1 is not recomputed.
+        roi:
+          $ref: "#/components/schemas/HeatmapRoi"
+          description: >
+            Optional heatmap ROI. When provided, node placement is restricted
+            to this region (colorbar, margins, and titles are excluded
+            automatically). Stored in the run record so Stage 3 can reuse it
+            without asking the user again.
+
+    Stage2Run:
+      type: object
+      required:
+        - runId
+        - createdAt
+        - stage1RunId
+        - executionTimeMs
+        - finalNodes
+        - candidateLocations
+        - clusterCentroids
+        - coveragePercent
+        - nodeCount
+        - numClusters
+        - bestExclusionRadius
+        - nodeCoverageRadius
+        - transmitter
+        - imageWidth
+        - imageHeight
+        - visualizationImageBase64
+      properties:
+        runId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        stage1RunId:
+          type: string
+        executionTimeMs:
+          type: number
+        finalNodes:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+        candidateLocations:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+        clusterCentroids:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+            minItems: 2
+            maxItems: 2
+        coveragePercent:
+          type: number
+        nodeCount:
+          type: integer
+        numClusters:
+          type: integer
+        bestExclusionRadius:
+          type: number
+        nodeCoverageRadius:
+          type: number
+        transmitter:
+          type: array
+          items:
+            type: number
+          minItems: 2
+          maxItems: 2
+        imageWidth:
+          type: integer
+        imageHeight:
+          type: integer
+        roi:
+          $ref: "#/components/schemas/HeatmapRoi"
+        visualizationImageBase64:
+          type: string
+          description: Stage 1 heatmap with optimized node overlay, as a base64 PNG data URL.
+
+    Stage3RunInput:
+      type: object
+      required:
+        - stage2RunId
+        - maxNodes
+      properties:
+        stage2RunId:
+          type: string
+          description: The Stage 2 run to build on. Stage 1 and 2 are not recomputed.
+        maxNodes:
+          type: integer
+          minimum: 1
+          description: Maximum number of nodes the budget-constrained selection may place.

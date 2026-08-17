@@ -1,0 +1,62 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "WiPDEWdjMxHfnWwj1i42G"
+uri = "file://attached_assets/verify_heatmap.png"
+type = "image"
+title = "Generated Heatmap — Engineering Color Scale"
+
+[[outputs]]
+id = "XobMHx6tv05tIOuD34Qai"
+uri = "file://attached_assets/heatmap_final_check.png"
+type = "image"
+title = "Final Heatmap — Reference-Aligned Engine"
+
+[[outputs]]
+id = "PpV0Wgxy1F8hTyvKod9pU"
+uri = "file://attached_assets/validation_original_map.png"
+type = "image"
+title = "Validation — Original Map Input"
+
+[[outputs]]
+id = "COGskxWlQ07nf42zcGlan"
+uri = "file://attached_assets/validation_binary_mask.png"
+type = "image"
+title = "Validation — Binary Mask Input"
+
+[[outputs]]
+id = "cy2uOFvTzkFEEUvXQQSFQ"
+uri = "file://artifacts/api-server/engine/test_stage2_viz.png"
+type = "image"
+title = "Stage 2 — Node Placement on Stage 1 Heatmap"
+
+[[outputs]]
+id = "-0aiwdKeyCUwD88nLuHZ0"
+uri = "file://artifacts/api-server/engine/stage1_engine.py"
+type = "unspecified"
+title = "Stage 1 — Heatmap Generation (stage1_engine.py)"
+
+[[outputs]]
+id = "-ZmQSWPjm_LGOpwxx4vAU"
+uri = "file://artifacts/api-server/engine/node_placer_optimizer.py"
+type = "unspecified"
+title = "Stage 2 — Node Placement Optimizer (node_placer_optimizer.py)"
+
+[[outputs]]
+id = "r0t_TD6XdD4rSwGqXWJCM"
+uri = "file://artifacts/api-server/engine/run_stage2.py"
+type = "unspecified"
+title = "Stage 2 — Optimization Runner (run_stage2.py)"
+
+[[outputs]]
+id = "kX3sxDEERWO35aKHGLXNp"
+uri = "file://artifacts/api-server/engine/run_stage3.py"
+type = "unspecified"
+title = "Stage 3 — Budget Selection Runner (run_stage3.py)"
+
+[[outputs]]
+id = "jGfwoG4K1hnxKzWhkylZq"
+uri = "file://wifi_sim_engine.zip"
+type = "unspecified"
+title = "WiFi Sim Engine — all 4 backend scripts"

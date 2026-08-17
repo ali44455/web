@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "CUFE WiFi Coverage Simulator"
+version = "1.0.0"
+id = "artifacts/wifi-sim"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 24416
+
+[services.development]
+run = "pnpm --filter @workspace/wifi-sim run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/wifi-sim", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/wifi-sim/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "24416"
+BASE_PATH = "/"

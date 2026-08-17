@@ -1,10 +1,6 @@
 import { ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { 
-  Activity, Settings2, Info, LayoutDashboard, Cpu, 
-  CheckCircle2, Circle, MapPin, DollarSign, FileText,
-  Signal, Radio, BarChart3
-} from "lucide-react";
+import { Activity, Settings2, Info, LayoutDashboard, Cpu, CircleCheck as CheckCircle2, Circle, MapPin, DollarSign, FileText, Signal, Radio, ChartBar as BarChart3, CircleDollarSign } from "lucide-react";
 import logoUrl from "@/assets/spark-squad-logo.jpeg";
 import IntroSequence from "./IntroSequence";
 import AnimatedBackground from "./AnimatedBackground";
@@ -38,6 +34,7 @@ export default function Layout({ children }: LayoutProps) {
     { href: "/simulator/stage-2", label: "Node Placement", icon: MapPin },
     { href: "/simulator/stage-4", label: "Phased Array", icon: Radio },
     { href: "/simulator/stage-5", label: "Engineering Analysis", icon: BarChart3 },
+    { href: "/business-model", label: "Business Model", icon: CircleDollarSign },
     { href: "/simulator/stage-3", label: "Budget Optimization", icon: DollarSign },
     { href: "/reports", label: "Reports", icon: FileText },
     { href: "/guide", label: "Parameters Guide", icon: Settings2 },
@@ -50,8 +47,9 @@ export default function Layout({ children }: LayoutProps) {
     { id: 3, label: "Node Placement", isActive: (step: number) => step >= 2, isComplete: (step: number) => step >= 3 },
     { id: 4, label: "Phased Array", isActive: (step: number) => step >= 3, isComplete: (step: number) => step >= 4 },
     { id: 5, label: "Analysis", isActive: (step: number) => step >= 4, isComplete: (step: number) => step >= 5 },
-    { id: 6, label: "Budget Opt.", isActive: (step: number) => step >= 5, isComplete: (step: number) => step >= 6 },
-    { id: 7, label: "Report", isActive: (step: number) => step >= 6, isComplete: () => false },
+    { id: 6, label: "Business", isActive: (step: number) => step >= 5, isComplete: (step: number) => step >= 6 },
+    { id: 7, label: "Budget Opt.", isActive: (step: number) => step >= 6, isComplete: (step: number) => step >= 7 },
+    { id: 8, label: "Report", isActive: (step: number) => step >= 7, isComplete: () => false },
   ];
 
   // Determine current step and stage name based on location — must be before any early return
@@ -62,13 +60,13 @@ export default function Layout({ children }: LayoutProps) {
   } else if (location.startsWith("/simulator/stage-4")) {
     currentStep = 3; stageName = "Phased Array";
   } else if (location.startsWith("/simulator/stage-3")) {
-    currentStep = 5; stageName = "Budget Opt";
+    currentStep = 6; stageName = "Budget Opt";
   } else if (location.startsWith("/simulator/stage-2")) {
     currentStep = 2; stageName = "Node Placement";
   } else if (location.startsWith("/simulator")) {
     currentStep = 1; stageName = "Heatmap";
   } else if (location.startsWith("/reports")) {
-    currentStep = 6; stageName = "Report";
+    currentStep = 7; stageName = "Report";
   } else if (location === "/") {
     stageName = "Dashboard";
   }
@@ -128,6 +126,8 @@ export default function Layout({ children }: LayoutProps) {
                 active = location.startsWith("/simulator/stage-2");
               } else if (item.href === "/simulator/stage-3") {
                 active = location.startsWith("/simulator/stage-3");
+              } else if (item.href === "/business-model") {
+                active = location.startsWith("/business-model");
               } else {
                 active = location.startsWith(item.href);
               }

@@ -14,6 +14,8 @@ import Stage2 from '@/pages/simulator/stage2';
 import Stage3 from '@/pages/simulator/stage3';
 import Stage4 from '@/pages/simulator/stage4';
 import Stage5 from '@/pages/simulator/stage5';
+import BusinessModel from '@/pages/business-model';
+import BusinessModel from '@/pages/business-model';
 import NotFound from '@/pages/not-found';
 
 const queryClient = new QueryClient({
@@ -39,7 +41,9 @@ function Router() {
         <Route path="/simulator/stage-2" component={Stage2} />
         <Route path="/simulator/stage-3" component={Stage3} />
         <Route path="/simulator/stage-4" component={Stage4} />
+        <Route path="/business-model" component={BusinessModel} />
         <Route path="/simulator/stage-5" component={Stage5} />
+        <Route path="/business-model" component={BusinessModel} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

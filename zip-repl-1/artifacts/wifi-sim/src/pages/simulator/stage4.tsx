@@ -7,12 +7,7 @@
  */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useSearch } from "wouter";
-import {
-  Zap, ArrowLeft, ArrowRight, ChevronRight,
-  AlertCircle, Radio, Activity, Play, Pause,
-  RotateCcw, Download, Layers, Info, Antenna,
-  Maximize2, X, ChevronLeft,
-} from "lucide-react";
+import { Zap, ArrowLeft, ArrowRight, ChevronRight, CircleAlert as AlertCircle, Radio, Activity, Play, Pause, RotateCcw, Download, Layers, Info, Antenna, Maximize2, X, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,7 +92,7 @@ export default function Stage4() {
   const { toast }    = useToast();
 
   // ── Config ─────────────────────────────────────────────────────────────────
-  const [cfg, setCfg] = useState<Cfg>({ txPowerDbm: 19, targetRssiThreshold: -80, nIterations: 10, stepAngle: 0.1 });
+  const [cfg, setCfg] = useState<Cfg>({ txPowerDbm: 19, targetRssiThreshold: -80, nIterations: 10, stepAngle: 5 });
 
   // ── Simulation state ───────────────────────────────────────────────────────
   const [status,       setStatus]       = useState<SimStatus>("idle");
@@ -318,7 +313,7 @@ export default function Stage4() {
         </h1>
         <p className="text-slate-400 mt-2 text-sm max-w-2xl font-light leading-relaxed">
           5-element FDFD phased array at the transmitter. The sparse LU factorization is cached once, then the
-          antenna scans the complete 360° region in 0.1° steps (3,600 scientifically ordered frames) before
+          antenna scans the complete 360° region in 5° steps (72 scientifically ordered frames) before
           targeting any weak node. This keeps the notebook physics while making the beam and node interaction visible.
         </p>
       </div>
@@ -352,11 +347,11 @@ export default function Stage4() {
                 value={cfg.nIterations}
                 onChange={(v) => setCfg((c) => ({ ...c, nIterations: v }))} />
               <ParamField label="Scan Angle Step (degrees)"
-                help="0.1° = 3,600 smooth full-region frames; larger steps reduce compute time"
+                help="5° = 72 full-region frames across 0°–355°"
                 disabled={isRunning}
-                min={0.1} max={3}
+                min={5} max={5}
                 value={cfg.stepAngle}
-                onChange={(v) => setCfg((c) => ({ ...c, stepAngle: Math.min(3, Math.max(0.1, v)) }))} />
+                onChange={() => setCfg((c) => ({ ...c, stepAngle: 5 }))} />
             </div>
             <Button
               onClick={startRun}
@@ -400,7 +395,7 @@ export default function Stage4() {
                   <div className="h-1.5 bg-border rounded-full overflow-hidden">
                     <div className="h-full bg-primary transition-all duration-300 rounded-full" style={{ width: `${precomputePct}%` }} />
                   </div>
-                  <p className="text-[10px] text-slate-600 font-mono">LU cached once → {initInfo?.totalAngles ?? 3600} angle solves; frames stream while rendering</p>
+                  <p className="text-[10px] text-slate-600 font-mono">LU cached once → {initInfo?.totalAngles ?? 72} angle solves; frames stream while rendering</p>
                 </div>
               )}
               {status === "streaming" && (
@@ -541,7 +536,7 @@ export default function Stage4() {
                 {status === "precomputing" && (
                   <>
                     <p className="text-primary font-mono text-xs">
-                        {precomputePct}% — {Math.round(precomputePct * (initInfo?.totalAngles ?? 3600) / 100)} / {initInfo?.totalAngles ?? 3600} angles solved
+                        {precomputePct}% — {Math.round(precomputePct * (initInfo?.totalAngles ?? 72) / 100)} / {initInfo?.totalAngles ?? 72} angles solved
                     </p>
                     <p className="text-slate-600 text-xs">Frames stream in real-time after this step</p>
                   </>
@@ -700,7 +695,7 @@ export default function Stage4() {
                 onClick={() => setLightboxIdx(frames.indexOf(maxHoldFrame))}
               />
               <div className="px-4 py-2 bg-primary/5 text-[10px] font-mono text-primary/70 text-center">
-              Best achievable signal at every pixel across the complete 360° scan (0.1° default step)
+              Best achievable signal at every pixel across the complete 360° scan (5° default step)
               </div>
             </div>
           )}

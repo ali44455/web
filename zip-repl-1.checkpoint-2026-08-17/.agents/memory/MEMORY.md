@@ -1,0 +1,7 @@
+- [Porting a scientific Python solver into a TS monorepo](python-engine-subprocess.md) — when a numeric solver (sparse linear algebra, image segmentation libs) has no faithful JS equivalent, wrap it as a headless subprocess instead of rewriting it.
+- [Orval multipart schemas need DOM lib](orval-multipart-dom-lib.md) — an OpenAPI `format: binary` field breaks generated-client typecheck unless the zod/client tsconfig includes `"dom"` in `lib`.
+- [Fixed color scales for engineering viz](engineering-viz-fixed-color-scale.md) — never normalize a heatmap's color range per-run; use fixed vmin/vmax so a value always means the same color.
+- [Extent filter for shape segmentation](shape-segmentation-extent-filter.md) — area/bbox-area separates compact blobs (buildings) from thin spanning networks (roads) far better than compactness.
+- [ROI coordinate contract](roi-coordinate-contract.md) — rendered heatmap selections must map through the persisted data rectangle, not the decorated PNG bounds.
+- [Notebook optimizer configuration](notebook-optimizer-configuration.md) — algorithm parity also requires reproducing notebook-side parameter wiring, especially percentile-derived thresholds.
+- [MATLAB optimizer parity](matlab-optimizer-parity.md) — the original MATLAB class is a different ILP/candidate pipeline; matching notebook logic does not establish MATLAB equivalence.
